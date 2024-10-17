@@ -9,6 +9,7 @@
 #include <limits.h>
 
 #define MSTRING_IS_TRIM(c) (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\b' || c == '\f')
+#define DEREF(type, value) *(type*)(value)
 
 typedef struct __mstring
 {
@@ -53,12 +54,13 @@ mstring mstring_replace(mstring str, const char* what, const char* to);
 mstring mstring_remove(mstring str, const char* what);
 
 mstring mstring_join(mstring str1, mstring str2);
+mstring mstring_join_cstr(mstring str1, const char* str2);
 
 mstring mstring_trim_left(mstring str);
 mstring mstring_trim_right(mstring str);
 mstring mstring_trim(mstring str);
 
-void* mstring_convert(mstring str, const char* pattern);
+void* mstring_convert(mstring str, const char* pattern, size_t type_size);
 
 #ifdef MSTRING_IMPL
 #undef MSTRING_IMPL
@@ -369,6 +371,26 @@ mstring mstring_join(mstring str1, mstring str2)
     return new_str;
 }
 
+mstring mstring_join_cstr(mstring str1, const char* str2)
+{
+    if (!str1 || !str1->_data || !str2)
+        return NULL;
+
+    size_t length = str1->_length + strlen(str2);
+
+    char* output = (char*)malloc(length + 1);
+    memset(output, 0, length + 1);
+
+    strcat(output, str1->_data);
+    strcat(output, str2);
+
+    mstring new_str = mstring_alloc();
+    new_str->_data = output;
+    new_str->_length = length;
+
+    return new_str;
+}
+
 mstring mstring_trim_left(mstring str)
 {
     if (!str || !str->_data)
@@ -412,12 +434,12 @@ mstring mstring_trim(mstring str)
     return mstring_substr(str, new_start, new_end - new_start + 1);
 }
 
-void* mstring_convert(mstring str, const char* pattern)
+void* mstring_convert(mstring str, const char* pattern, size_t type_size)
 {
     if (!str || !str->_data || !pattern)
         return NULL;
 
-    void* value;
+    void* value = malloc(type_size);
     sscanf(str->_data, pattern, value);
     return value;
 }
